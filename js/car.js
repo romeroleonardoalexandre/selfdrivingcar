@@ -1,6 +1,6 @@
 
 class Car{
-    constructor(x,y,width, height) {
+    constructor(x,y,width, height, controlType, maxSpeed=3) {
         this.x = x;
         this.y = y;
         this.width = width;
@@ -8,30 +8,38 @@ class Car{
 
         this.speed=0;
         this.acceleration = 0.2;
-        this.maxSpeed = 3;
+        this.maxSpeed = maxSpeed;
         this.friction = 0.05;
         this.angle = 0;
         this.damage = false;
-        this.sensor = new Sensor(this);
+        if (controlType != "DUMMY") {
+            this.sensor = new Sensor(this);
+        }
 
-        this.controls = new Controls();
+        this.controls = new Controls(controlType);
     }
 
-    update(roadBorders) {
+    update(roadBorders, traffic) {
         if(!this.damage) {
             this.#move();
             this.polygon = this.#createPolygon();
-            this.damage = this.#assessDamage(roadBorders);
-            this.sensor.update(roadBorders);
+            this.damage = this.#assessDamage(roadBorders, traffic);
+            // not to draw for dummy car
+            if (this.sensor) this.sensor.update(roadBorders, traffic);
         }
     }
 
-    #assessDamage(roadBorders) {
+    #assessDamage(roadBorders, traffic) {
         for (let i = 0; i < roadBorders.length; i++) {
             if(polysIntersect(this.polygon, roadBorders[i])) {
                 return true;
             }
-            
+        }
+
+        for (let i = 0; i < traffic.length; i++) {
+            if(polysIntersect(this.polygon, traffic[i].polygon)) {
+                return true;
+            }
         }
         return false;
     }
@@ -103,9 +111,9 @@ class Car{
         this.y -= Math.cos(this.angle)*this.speed;
     }
 
-    draw(ctx){
-        if (this.damage) ctx.fillStyle="gray"
-        else ctx.fillStyle="black"
+    draw(ctx, color){
+        if (this.damage) ctx.fillStyle="gray";
+        else ctx.fillStyle=color;
 
         ctx.beginPath();
         ctx.moveTo(
@@ -120,7 +128,7 @@ class Car{
         }
 
         ctx.fill();
-
-        this.sensor.draw(ctx);
+        // not to draw for dummy car
+        if (this.sensor) this.sensor.draw(ctx);
     }
 }
